@@ -1,17 +1,85 @@
-import { useCodemoteStore } from "../../store";
+import { useCodemoteStore } from "../store";
 import { useMemo } from "react";
+import type { Problem } from "../types";
 
 const Statistics = () => {
-  const stats = useCodemoteStore((state) => state.getStats());
   const problems = useCodemoteStore((state) => state.problems);
   const dailyGoal = useCodemoteStore((state) => state.dailyGoal);
   const setDailyGoal = useCodemoteStore((state) => state.setDailyGoal);
 
+  // Calculate stats with useMemo to avoid infinite loop
+  const stats = useMemo(() => {
+    const byDifficulty = {
+      Easy: 0,
+      Medium: 0,
+      Hard: 0,
+    };
+
+    const byCategory: Record<string, number> = {};
+
+    problems.forEach((problem) => {
+      byDifficulty[problem.difficulty]++;
+      problem.categories.forEach((cat) => {
+        byCategory[cat] = (byCategory[cat] || 0) + 1;
+      });
+    });
+
+    // Calculate current streak
+    const uniqueDates = Array.from(new Set(problems.map((p) => p.date))).sort(
+      (a, b) => new Date(b).getTime() - new Date(a).getTime(),
+    );
+
+    let currentStreak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < uniqueDates.length; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const checkDateStr = checkDate.toISOString().split("T")[0];
+
+      if (uniqueDates.includes(checkDateStr)) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+
+    // Calculate longest streak
+    let maxStreak = 1;
+    let tempStreak = 1;
+
+    for (let i = 1; i < uniqueDates.length; i++) {
+      const prevDate = new Date(uniqueDates[i - 1]);
+      const currDate = new Date(uniqueDates[i]);
+      const diffDays = Math.floor(
+        (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      if (diffDays === 1) {
+        tempStreak++;
+        maxStreak = Math.max(maxStreak, tempStreak);
+      } else {
+        tempStreak = 1;
+      }
+    }
+
+    const longestStreak = uniqueDates.length === 0 ? 0 : maxStreak;
+
+    return {
+      totalSolved: problems.length,
+      currentStreak,
+      longestStreak,
+      byDifficulty,
+      byCategory,
+    };
+  }, [problems]);
+
   // Get top categories
   const topCategories = useMemo(() => {
     const categoryEntries = Object.entries(stats.byCategory)
-      .filter(([_, count]) => count > 0)
-      .sort((a, b) => b[1] - a[1])
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
       .slice(0, 10);
     return categoryEntries;
   }, [stats.byCategory]);
@@ -25,7 +93,7 @@ const Statistics = () => {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split("T")[0];
-      const count = problems.filter((p) => p.date === dateStr).length;
+      const count = problems.filter((p: Problem) => p.date === dateStr).length;
 
       last7Days.push({
         date: dateStr,
@@ -200,13 +268,13 @@ const Statistics = () => {
                     <span className="text-gray-300 font-medium">
                       {category}
                     </span>
-                    <span className="text-gray-400">{count}</span>
+                    <span className="text-gray-400">{count as number}</span>
                   </div>
                   <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-orange-600"
                       style={{
-                        width: `${(count / stats.totalSolved) * 100}%`,
+                        width: `${((count as number) / stats.totalSolved) * 100}%`,
                       }}
                     />
                   </div>

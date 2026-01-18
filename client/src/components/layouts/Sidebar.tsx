@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useCodemoteStore } from "../../store";
 import codemoteLogo from "../../assets/logo-dark.svg";
 
@@ -7,7 +8,41 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ currentView, onNavigate }: SidebarProps) => {
-  const stats = useCodemoteStore((state) => state.getStats());
+  // Select just the problems array to avoid infinite loop
+  const problems = useCodemoteStore((state) => state.problems);
+
+  // Calculate stats with useMemo
+  const stats = useMemo(() => {
+    if (problems.length === 0) {
+      return { currentStreak: 0, totalSolved: 0 };
+    }
+
+    const uniqueDates = Array.from(new Set(problems.map((p) => p.date))).sort(
+      (a, b) => new Date(b).getTime() - new Date(a).getTime(),
+    );
+
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < uniqueDates.length; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const checkDateStr = checkDate.toISOString().split("T")[0];
+
+      if (uniqueDates.includes(checkDateStr)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return {
+      currentStreak: streak,
+      totalSolved: problems.length,
+    };
+  }, [problems]);
+
   const currentStreak = stats.currentStreak;
   const totalSolved = stats.totalSolved;
 

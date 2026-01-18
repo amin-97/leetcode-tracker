@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import { useCodemoteStore } from "../../store";
-import { Problem, Difficulty, ProblemCategory } from "../../types";
-import AddProblemModal from "../modals/AddProblemModal";
+import { useCodemoteStore } from "../store";
+import type { Problem, Difficulty, ProblemCategory } from "../types";
+import AddProblemModal from "../components/modals/AddProblemModal";
 
 const Problems = () => {
   const problems = useCodemoteStore((state) => state.problems);
@@ -30,7 +30,7 @@ const Problems = () => {
 
   // Filtered and sorted problems
   const filteredProblems = useMemo(() => {
-    let filtered = problems.filter((problem) => {
+    const filtered = problems.filter((problem) => {
       const matchesSearch =
         problem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (problem.notes &&

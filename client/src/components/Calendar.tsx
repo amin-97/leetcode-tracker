@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useCodemoteStore } from "../../store";
-import AddProblemModal from "../modals/AddProblemModal";
+import { useCodemoteStore } from "../store";
+import AddProblemModal from "./modals/AddProblemModal";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
 
   const problems = useCodemoteStore((state) => state.problems);
   const dailyGoal = useCodemoteStore((state) => state.dailyGoal);
@@ -61,14 +62,18 @@ const Calendar = () => {
     setIsModalOpen(true);
   };
 
-  const getProblemCountForDay = (day: number): number => {
+  const getProblemsForDay = (day: number) => {
     const date = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
       day,
     );
     const dateStr = date.toISOString().split("T")[0];
-    return problems.filter((p) => p.date === dateStr).length;
+    return problems.filter((p) => p.date === dateStr);
+  };
+
+  const getProblemCountForDay = (day: number): number => {
+    return getProblemsForDay(day).length;
   };
 
   const getIntensityClass = (count: number): string => {
@@ -90,6 +95,12 @@ const Calendar = () => {
   for (let i = 1; i <= daysInMonth; i++) {
     calendarDays.push(i);
   }
+
+  const difficultyColors = {
+    Easy: "text-green-400",
+    Medium: "text-yellow-400",
+    Hard: "text-red-400",
+  };
 
   return (
     <>
@@ -156,40 +167,76 @@ const Calendar = () => {
           {calendarDays.map((day, index) => {
             const problemCount = day ? getProblemCountForDay(day) : 0;
             const goalMet = day ? isGoalMet(problemCount) : false;
+            const dayProblems = day ? getProblemsForDay(day) : [];
+            const isHovered = day === hoveredDay;
 
             return (
-              <div
-                key={index}
-                onClick={() => day && handleDayClick(day)}
-                className={`
-                  aspect-square flex items-center justify-center rounded-lg relative
-                  ${day ? `${getIntensityClass(problemCount)} hover:opacity-80 cursor-pointer transition-all` : ""}
-                `}
-              >
-                {day && (
-                  <>
-                    <span className="text-white font-medium">{day}</span>
-                    {problemCount > 0 && (
-                      <div className="absolute top-1 right-1 bg-white text-gray-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                        {problemCount}
+              <div key={index} className="relative">
+                <div
+                  onClick={() => day && handleDayClick(day)}
+                  onMouseEnter={() => day && setHoveredDay(day)}
+                  onMouseLeave={() => setHoveredDay(null)}
+                  className={`
+                    aspect-square flex items-center justify-center rounded-lg relative
+                    ${day ? `${getIntensityClass(problemCount)} hover:opacity-80 cursor-pointer transition-all` : ""}
+                  `}
+                >
+                  {day && (
+                    <>
+                      <span className="text-white font-medium">{day}</span>
+                      {problemCount > 0 && (
+                        <div className="absolute top-1 right-1 bg-white text-gray-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                          {problemCount}
+                        </div>
+                      )}
+                      {goalMet && (
+                        <div className="absolute bottom-1 left-1">
+                          <svg
+                            className="w-4 h-4 text-green-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Tooltip showing problem titles */}
+                {isHovered && dayProblems.length > 0 && (
+                  <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64">
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl">
+                      <div className="text-xs font-semibold text-gray-400 mb-2">
+                        {dayProblems.length} problem
+                        {dayProblems.length > 1 ? "s" : ""} solved
                       </div>
-                    )}
-                    {goalMet && (
-                      <div className="absolute bottom-1 left-1">
-                        <svg
-                          className="w-4 h-4 text-green-400"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {dayProblems.map((problem) => (
+                          <div
+                            key={problem.id}
+                            className="text-sm text-white flex items-center gap-2"
+                          >
+                            <span
+                              className={`text-xs font-bold ${difficultyColors[problem.difficulty]}`}
+                            >
+                              {problem.difficulty[0]}
+                            </span>
+                            <span className="truncate">{problem.name}</span>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </>
+                    </div>
+                    {/* Arrow */}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                      <div className="border-4 border-transparent border-t-gray-800"></div>
+                    </div>
+                  </div>
                 )}
               </div>
             );

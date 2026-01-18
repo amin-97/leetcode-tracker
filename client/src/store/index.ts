@@ -1,12 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type {
-  Problem,
-  DailyGoal,
-  Stats,
-  Difficulty,
-  ProblemCategory,
-} from "../types";
+import type { Problem, DailyGoal, Stats, ProblemCategory } from "../types";
 
 interface CodemoteStore {
   problems: Problem[];

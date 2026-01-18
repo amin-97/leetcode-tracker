@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCodemoteStore } from "../../store";
-import { Difficulty, ProblemCategory, Problem } from "../../types";
+import type { Difficulty, ProblemCategory, Problem } from "../../types";
 
 interface AddProblemModalProps {
   isOpen: boolean;
@@ -50,34 +50,44 @@ const AddProblemModal = ({
   const addProblem = useCodemoteStore((state) => state.addProblem);
   const updateProblem = useCodemoteStore((state) => state.updateProblem);
 
-  const [name, setName] = useState("");
-  const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
-  const [categories, setCategories] = useState<ProblemCategory[]>([]);
-  const [link, setLink] = useState("");
-  const [notes, setNotes] = useState("");
-  const [timeSpent, setTimeSpent] = useState<number | "">("");
+  const [formState, setFormState] = useState({
+    name: "",
+    difficulty: "Medium" as Difficulty,
+    categories: [] as ProblemCategory[],
+    link: "",
+    notes: "",
+    timeSpent: "" as number | "",
+  });
 
+  const { name, difficulty, categories, link, notes, timeSpent } = formState;
+
+  const resetForm = useCallback(() => {
+    setFormState({
+      name: "",
+      difficulty: "Medium",
+      categories: [],
+      link: "",
+      notes: "",
+      timeSpent: "",
+    });
+  }, []);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (editProblem) {
-      setName(editProblem.name);
-      setDifficulty(editProblem.difficulty);
-      setCategories(editProblem.categories);
-      setLink(editProblem.link || "");
-      setNotes(editProblem.notes || "");
-      setTimeSpent(editProblem.timeSpent || "");
+      setFormState({
+        name: editProblem.name,
+        difficulty: editProblem.difficulty,
+        categories: editProblem.categories,
+        link: editProblem.link || "",
+        notes: editProblem.notes || "",
+        timeSpent: editProblem.timeSpent || "",
+      });
     } else {
       resetForm();
     }
-  }, [editProblem, isOpen]);
-
-  const resetForm = () => {
-    setName("");
-    setDifficulty("Medium");
-    setCategories([]);
-    setLink("");
-    setNotes("");
-    setTimeSpent("");
-  };
+  }, [editProblem, resetForm]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,11 +115,12 @@ const AddProblemModal = ({
   };
 
   const toggleCategory = (category: ProblemCategory) => {
-    setCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category],
-    );
+    setFormState((prev) => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter((c) => c !== category)
+        : [...prev.categories, category],
+    }));
   };
 
   if (!isOpen) return null;
@@ -150,7 +161,9 @@ const AddProblemModal = ({
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) =>
+                setFormState((prev) => ({ ...prev, name: e.target.value }))
+              }
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
               placeholder="e.g., Two Sum"
               required
@@ -167,7 +180,9 @@ const AddProblemModal = ({
                 <button
                   key={diff}
                   type="button"
-                  onClick={() => setDifficulty(diff)}
+                  onClick={() =>
+                    setFormState((prev) => ({ ...prev, difficulty: diff }))
+                  }
                   className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
                     difficulty === diff
                       ? diff === "Easy"
@@ -215,7 +230,9 @@ const AddProblemModal = ({
             <input
               type="url"
               value={link}
-              onChange={(e) => setLink(e.target.value)}
+              onChange={(e) =>
+                setFormState((prev) => ({ ...prev, link: e.target.value }))
+              }
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
               placeholder="https://leetcode.com/problems/..."
             />
@@ -230,7 +247,10 @@ const AddProblemModal = ({
               type="number"
               value={timeSpent}
               onChange={(e) =>
-                setTimeSpent(e.target.value ? Number(e.target.value) : "")
+                setFormState((prev) => ({
+                  ...prev,
+                  timeSpent: e.target.value ? Number(e.target.value) : "",
+                }))
               }
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500"
               placeholder="30"
@@ -245,7 +265,9 @@ const AddProblemModal = ({
             </label>
             <textarea
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) =>
+                setFormState((prev) => ({ ...prev, notes: e.target.value }))
+              }
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500 h-24 resize-none"
               placeholder="Key insights, approaches used, things to remember..."
             />
