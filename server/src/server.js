@@ -1,16 +1,34 @@
+import dotenv from "dotenv";
+
+// Load environment variables FIRST before any other imports
+dotenv.config();
+
+// DEBUG: Check if env vars are loading
+console.log("🔍 GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
+console.log(
+  "🔍 GOOGLE_CLIENT_SECRET:",
+  process.env.GOOGLE_CLIENT_SECRET ? "✅ Set" : "❌ Not Set",
+);
+console.log(
+  "🔍 MONGODB_URI:",
+  process.env.MONGODB_URI ? "✅ Set" : "❌ Not Set",
+);
+console.log("🔍 JWT_SECRET:", process.env.JWT_SECRET ? "✅ Set" : "❌ Not Set");
+console.log("🔍 PORT:", process.env.PORT);
+console.log("---");
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import connectDB from "./config/database.js";
-import passport from "./config/passport.js";
+import passport, { configurePassport } from "./config/passport.js";
 
 // Import routes
 import authRoutes from "./routes/authRoutes.js";
 import problemRoutes from "./routes/problemRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 
-// Load environment variables
-dotenv.config();
+// Configure passport AFTER env vars are loaded
+configurePassport();
 
 // Initialize Express app
 const app = express();
