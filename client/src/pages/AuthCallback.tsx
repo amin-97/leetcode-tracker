@@ -1,34 +1,36 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 
-const AuthCallback = () => {
-  const navigate = useNavigate();
+interface AuthCallbackProps {
+  onSuccess: (token: string) => void;
+}
+
+const AuthCallback = ({ onSuccess }: AuthCallbackProps) => {
   const [searchParams] = useSearchParams();
-  const { handleGoogleCallback } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = searchParams.get("token");
     const error = searchParams.get("error");
 
-    if (error) {
-      navigate("/login?error=" + error);
-      return;
-    }
-
     if (token) {
-      handleGoogleCallback(token);
-      navigate("/");
-    } else {
-      navigate("/login");
+      // Save token to localStorage
+      localStorage.setItem("token", token);
+      onSuccess(token);
+      // Redirect to home
+      navigate("/", { replace: true });
+    } else if (error) {
+      console.error("Auth error:", error);
+      // Redirect to login with error
+      navigate("/login?error=" + error, { replace: true });
     }
-  }, [searchParams, navigate, handleGoogleCallback]);
+  }, [searchParams, navigate, onSuccess]);
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-        <p className="text-gray-400 mt-4">Completing sign in...</p>
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+        <p className="mt-4 text-gray-400">Completing sign in...</p>
       </div>
     </div>
   );
