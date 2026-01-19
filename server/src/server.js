@@ -1,77 +1,58 @@
+// Load .env FIRST - BEFORE any imports that need env variables
 import dotenv from "dotenv";
-
-// Load environment variables FIRST before any other imports
 dotenv.config();
 
-// DEBUG: Check if env vars are loading
-console.log("🔍 GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
-console.log(
-  "🔍 GOOGLE_CLIENT_SECRET:",
-  process.env.GOOGLE_CLIENT_SECRET ? "✅ Set" : "❌ Not Set",
-);
-console.log(
-  "🔍 MONGODB_URI:",
-  process.env.MONGODB_URI ? "✅ Set" : "❌ Not Set",
-);
-console.log("🔍 JWT_SECRET:", process.env.JWT_SECRET ? "✅ Set" : "❌ Not Set");
-console.log("🔍 PORT:", process.env.PORT);
-console.log("---");
-
+// Now import everything else
 import express from "express";
 import cors from "cors";
-import connectDB from "./config/database.js";
-import passport, { configurePassport } from "./config/passport.js";
-
-// Import routes
+import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
+import passport from "./config/passport.js";
 import authRoutes from "./routes/authRoutes.js";
-import problemRoutes from "./routes/problemRoutes.js";
-import statsRoutes from "./routes/statsRoutes.js";
 
-// Configure passport AFTER env vars are loaded
-configurePassport();
-
-// Initialize Express app
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
-connectDB();
+console.log(
+  "🔍 GOOGLE_CLIENT_ID:",
+  process.env.GOOGLE_CLIENT_ID ? "✅ Set" : "❌ Missing",
+);
+console.log(
+  "🔍 GOOGLE_CLIENT_SECRET:",
+  process.env.GOOGLE_CLIENT_SECRET ? "✅ Set" : "❌ Missing",
+);
 
-// Middleware
+// CORS with credentials
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
   }),
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(passport.initialize());
 
-// Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", message: "Server is running" });
-});
+// Middleware
+app.use(express.json());
+app.use(cookieParser());
+app.use(passport.initialize());
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/problems", problemRoutes);
-app.use("/api/stats", statsRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error("Error:", err);
-  res.status(500).json({ message: "Internal server error" });
+// Health check
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(
-    `🌐 CORS enabled for: ${process.env.CLIENT_URL || "http://localhost:5173"}`,
-  );
-});
-
-export default app;
+// Connect to MongoDB and start server
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("✅ MongoDB connected successfully");
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1);
+  });

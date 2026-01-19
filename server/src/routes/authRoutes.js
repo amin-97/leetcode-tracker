@@ -1,58 +1,30 @@
-import User from "../models/User.js";
-import DailyGoal from "../models/DailyGoal.js";
-import { generateToken } from "../utils/jwt.js";
+import express from "express";
+import passport from "../config/passport.js";
+import {
+  googleCallback,
+  getCurrentUser,
+  logout,
+} from "../controllers/authController.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 
-// Google OAuth callback
-export const googleCallback = async (req, res) => {
-  try {
-    const user = req.user;
+const router = express.Router();
 
-    if (!user) {
-      return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
-    }
+// Google OAuth routes
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] }),
+);
 
-    // Check if daily goal exists, create if not
-    const dailyGoal = await DailyGoal.findOne({ userId: user._id.toString() });
-    if (!dailyGoal) {
-      await DailyGoal.create({
-        userId: user._id.toString(),
-        problemsPerDay: 1,
-        enabled: true,
-      });
-    }
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { session: false, failureRedirect: "/" }),
+  googleCallback,
+);
 
-    // Generate token
-    const token = generateToken({
-      id: user._id.toString(),
-      email: user.email,
-      name: user.name,
-    });
+// Get current user (protected)
+router.get("/me", authMiddleware, getCurrentUser);
 
-    // Redirect to frontend with token
-    res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
-  } catch (error) {
-    console.error("Google callback error:", error);
-    res.redirect(`${process.env.CLIENT_URL}/login?error=server_error`);
-  }
-};
+// Logout
+router.post("/logout", logout);
 
-// Get current user
-export const getCurrentUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.json({
-      id: user._id,
-      email: user.email,
-      name: user.name,
-      avatar: user.avatar,
-    });
-  } catch (error) {
-    console.error("Get current user error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
+export default router;

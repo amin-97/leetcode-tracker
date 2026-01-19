@@ -2,7 +2,8 @@ import { verifyToken } from "../utils/jwt.js";
 
 export const authMiddleware = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1]; // Bearer <token>
+    // Get token from HTTP-only cookie
+    const token = req.cookies.token;
 
     if (!token) {
       return res.status(401).json({ message: "No token provided" });

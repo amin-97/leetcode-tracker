@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      select: false, // Don't return password by default
+      select: false,
     },
     name: {
       type: String,
@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema(
     googleId: {
       type: String,
       unique: true,
-      sparse: true, // Allows null values while maintaining uniqueness
+      sparse: true,
     },
     avatar: {
       type: String,
@@ -33,19 +33,15 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-// Hash password before saving
-userSchema.pre("save", async function (next) {
+// Hash password before saving - NO next() needed for async functions
+userSchema.pre("save", async function () {
+  // Skip if password not modified or doesn't exist (Google OAuth users)
   if (!this.isModified("password") || !this.password) {
-    return next();
+    return;
   }
 
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Method to compare passwords

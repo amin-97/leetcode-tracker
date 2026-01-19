@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 interface AuthCallbackProps {
-  onSuccess: (token: string) => void;
+  onSuccess: () => void;
 }
 
 const AuthCallback = ({ onSuccess }: AuthCallbackProps) => {
@@ -10,19 +10,15 @@ const AuthCallback = ({ onSuccess }: AuthCallbackProps) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = searchParams.get("token");
     const error = searchParams.get("error");
 
-    if (token) {
-      // Save token to localStorage
-      localStorage.setItem("token", token);
-      onSuccess(token);
-      // Redirect to home
-      navigate("/", { replace: true });
-    } else if (error) {
+    if (error) {
       console.error("Auth error:", error);
-      // Redirect to login with error
-      navigate("/login?error=" + error, { replace: true });
+      navigate("/?error=" + error, { replace: true });
+    } else {
+      // Cookie is already set by backend, just call onSuccess
+      onSuccess();
+      navigate("/", { replace: true });
     }
   }, [searchParams, navigate, onSuccess]);
 

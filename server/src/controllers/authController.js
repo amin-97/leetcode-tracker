@@ -2,13 +2,21 @@ import User from "../models/User.js";
 import DailyGoal from "../models/DailyGoal.js";
 import { generateToken } from "../utils/jwt.js";
 
+// Cookie options
+const getCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+});
+
 // Google OAuth callback
 export const googleCallback = async (req, res) => {
   try {
     const user = req.user;
 
     if (!user) {
-      return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
+      return res.redirect(`${process.env.CLIENT_URL}?error=auth_failed`);
     }
 
     // Check if daily goal exists, create if not
@@ -28,11 +36,14 @@ export const googleCallback = async (req, res) => {
       name: user.name,
     });
 
-    // Redirect to frontend with token
-    res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+    // Set HTTP-only cookie
+    res.cookie("token", token, getCookieOptions());
+
+    // Redirect to frontend
+    res.redirect(`${process.env.CLIENT_URL}/auth/callback`);
   } catch (error) {
     console.error("Google callback error:", error);
-    res.redirect(`${process.env.CLIENT_URL}/login?error=server_error`);
+    res.redirect(`${process.env.CLIENT_URL}?error=server_error`);
   }
 };
 
@@ -53,6 +64,17 @@ export const getCurrentUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Get current user error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Logout - clear cookie
+export const logout = async (req, res) => {
+  try {
+    res.clearCookie("token");
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
